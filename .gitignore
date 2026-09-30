@@ -1,0 +1,34 @@
+# Secrets
+.env
+.env.*
+!.env.example
+!.env.example.*
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+
+# Temporary uploads / local artifacts
+temp_*
+upload_*.pdf
+*.log
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# GitHub / tooling local state
+*.local
