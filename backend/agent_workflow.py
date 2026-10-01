@@ -333,26 +333,61 @@ def web_node(state: ResearchState):
         "web_result": result
     }
 
-
 # --------------------------------------------------
 # Both: Document + Web Node
 # --------------------------------------------------
 
 def both_node(state: ResearchState):
+    # Step 1: Search the user's uploaded documents
     document_results = search_uploaded_documents(
         state["question"],
         state["user_id"]
     )
 
+    # Step 2: Prepare retrieved document context
+    document_context = "\n\n".join(
+        [
+            (
+                f"[Document Source {index}]\n"
+                f"{result['content']}"
+            )
+            for index, result in enumerate(
+                document_results,
+                start=1
+            )
+        ]
+    )
+
+    # Step 3: Give the document findings to the web researcher
+    web_question = f"""
+The user's uploaded documents have already been searched.
+
+DOCUMENT RESEARCH:
+{document_context}
+
+Original user question:
+{state["question"]}
+
+Use the document research above for information about the user's
+documents/profile.
+
+Now use current web information to research only the parts of the
+question that require current or external information.
+
+Do not invent information.
+Do not claim to have direct access to the uploaded document beyond
+the document research provided above.
+"""
+
+    # Step 4: Perform web research
     web_result = perform_web_search(
-        state["question"]
+        web_question
     )
 
     return {
         "document_results": document_results,
         "web_result": web_result
     }
-
 
 # --------------------------------------------------
 # Direct Node

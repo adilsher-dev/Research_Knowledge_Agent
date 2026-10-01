@@ -4,6 +4,7 @@ import re
 import base64
 import tempfile
 import uuid
+import numpy as np
 
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException, UploadFile, File, Form
@@ -12,7 +13,7 @@ from fastapi.responses import StreamingResponse
 from groq import Groq
 from pydantic import BaseModel
 from pypdf import PdfReader
-from sentence_transformers import SentenceTransformer
+from fastembed import TextEmbedding
 
 
 
@@ -93,8 +94,21 @@ client = Groq(
 # Embedding model
 # --------------------------------------------------
 
-embedding_model = SentenceTransformer(
-    "all-MiniLM-L6-v2"
+class EmbeddingModel:
+    def __init__(self, model_name: str):
+        self.model = TextEmbedding(model_name=model_name)
+
+    def encode(self, texts):
+        if isinstance(texts, str):
+            vector = list(self.model.embed([texts]))[0]
+            return np.asarray(vector)
+
+        vectors = list(self.model.embed(texts))
+        return np.asarray(vectors)
+
+
+embedding_model = EmbeddingModel(
+    "sentence-transformers/all-MiniLM-L6-v2"
 )
 
 

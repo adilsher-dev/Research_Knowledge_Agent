@@ -1,25 +1,39 @@
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
+from fastembed import TextEmbedding
+import numpy as np
 
-model = SentenceTransformer("all-MiniLM-L6-v2")
 
-text1 = "Generative AI can create new content."
-text2 = "Artificial intelligence can generate new content."
-text3 = "The weather is very hot today."
+model = TextEmbedding(
+    model_name="sentence-transformers/all-MiniLM-L6-v2"
+)
 
-embedding1 = model.encode([text1])
-embedding2 = model.encode([text2])
-embedding3 = model.encode([text3])
 
-similarity_1_2 = cosine_similarity(
-    embedding1,
-    embedding2
-)[0][0]
+def cosine_similarity(a, b):
+    a = np.asarray(a)
+    b = np.asarray(b)
 
-similarity_1_3 = cosine_similarity(
-    embedding1,
-    embedding3
-)[0][0]
+    return np.dot(a, b) / (
+        np.linalg.norm(a) * np.linalg.norm(b)
+    )
 
-print("Similarity between text 1 and text 2:", similarity_1_2)
-print("Similarity between text 1 and text 3:", similarity_1_3)
+
+texts = [
+    "RAG combines retrieval with language models.",
+    "Retrieval augmented generation uses external knowledge.",
+    "The weather is sunny today."
+]
+
+embeddings = list(model.embed(texts))
+
+similarity_1 = cosine_similarity(
+    embeddings[0],
+    embeddings[1]
+)
+
+similarity_2 = cosine_similarity(
+    embeddings[0],
+    embeddings[2]
+)
+
+print("Embedding dimension:", len(embeddings[0]))
+print("Related similarity:", similarity_1)
+print("Unrelated similarity:", similarity_2)
