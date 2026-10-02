@@ -1,72 +1,165 @@
-# AI Research Agent — Backend (Phase 1: Auth + User Isolation)
+# AI Research Agent
 
-FastAPI + LangGraph + PostgreSQL/pgvector. The RAG, hybrid retrieval (semantic + full-text + RRF),
-LangGraph routing and multimodal logic are unchanged; this phase adds authentication and
-per-user data ownership around them.
+AI Research Agent is a web application that helps users research a topic using different sources.
 
-## What changed in Phase 1
+A user can ask a normal question, search the web, ask questions from uploaded PDFs, or combine documents, web research, and images in the same request.
 
-- `auth.py` — bcrypt password hashing, JWT (HS256, 7-day expiry), `get_current_user` dependency
-- `schemas.py` — Pydantic models for auth, documents, history
-- `models.py` — new `User` and `Document` tables; `user_id` on `document_chunks` and `research_queries`; `route` on `research_queries`
-- `migrations/001_add_users_and_ownership.sql` — re-runnable migration for an existing database
-- `hybrid_retrieve`, `search_uploaded_documents`, `has_uploaded_documents` now require `user_id`
-- `agent_workflow.py` — `user_id` added to `ResearchState`, passed to every retrieval node
-- `/upload-pdf` — no longer builds a file path from the client filename (path-traversal fix); temp file is always deleted
-- `/agentic-research-multimodal` — now saves each run to the user's research history
-- CORS origins configurable via `FRONTEND_URL`
-- `requirements.txt` converted from UTF-16 to UTF-8; added `pyjwt`, `bcrypt`, `email-validator`
+I built this project to understand how RAG, vector search, multimodal AI, and agentic workflows can work together in one application.
 
-## Setup
+## Live Project
 
-```bash
-python -m venv .venv
-.venv\Scripts\activate        # Windows  (source .venv/bin/activate on macOS/Linux)
-pip install -r requirements.txt
-cp .env.example .env          # then fill in real values
-```
+Frontend:  
+https://research-knowledge-agent.vercel.app
 
-Apply the migration to your existing database:
+Backend:  
+https://ai-research-agent-backend-enoo.onrender.com
 
-```bash
-psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -f migrations/001_add_users_and_ownership.sql
-```
+API Documentation:  
+https://ai-research-agent-backend-enoo.onrender.com/docs
 
-Old rows (created before auth) get `user_id = NULL` and become invisible through the API.
-See the note at the bottom of the SQL file to assign them to your first account.
+## What the application can do
 
-Run:
+- Ask normal research questions
+- Upload PDF documents and ask questions about them
+- Search the web for current information
+- Analyze images
+- Combine information from documents and the web
+- Combine image information with uploaded documents
+- Combine image analysis with web research
+- Combine image, document, and web research in one request
+- Save research history
+- Manage uploaded documents
+- Keep documents and research history separated between users
 
-```bash
-uvicorn main:app --reload
-```
+## How the agent works
 
-## API overview
+The application uses a planner to decide what sources are needed for a question.
 
-| Method | Path | Auth |
-|---|---|---|
-| POST | `/auth/register`, `/auth/login` | public |
-| POST | `/auth/logout` | required |
-| GET | `/auth/me` | required |
-| POST | `/upload-pdf` | required |
-| POST | `/agentic-research-multimodal` (form: `question`, optional image `file`) | required |
-| GET | `/documents` | required |
-| DELETE | `/documents/{id}` | required |
-| GET | `/research-history`, `/research-history/{id}` | required |
+The main routes are:
 
-Legacy/experimental endpoints (`/chat`, `/research`, `/agent`, `/rag`, `/web-research`,
-`/vector-search`, `/hybrid-search`, `/agentic-research`, `/analyze-image`) are kept but now
-require auth and are user-scoped. The new frontend will not use them; consider removing them before production.
+1. Direct
+2. Document
+3. Web
+4. Document + Web
+5. Image
+6. Image + Document
+7. Image + Web
+8. Image + Document + Web
 
-Send the token as `Authorization: Bearer <access_token>`.
+The selected route is handled by a LangGraph workflow.
 
-## Known limitations (be aware)
+For example, a document + web request works like this:
 
-- **Not run end-to-end.** The changes were written and syntax-checked (`py_compile`) without network access,
-  so nothing here has been executed against a real Postgres, Groq, or the installed dependencies.
-  Please run the migration and smoke-test register -> login -> upload -> research on your machine.
-- Logout is client-side only (stateless JWT); tokens stay valid until expiry.
-- No rate limiting on `/auth/*`.
-- The Document row and its chunks are written in one transaction, but embedding is done synchronously
-  in the request, so large PDFs will make the upload request slow.
-- `requirements.txt` is still a full `pip freeze`; it has not been pruned.
+User Question
+→ Document Retrieval
+→ Web Research
+→ Final Synthesis
+→ Answer
+
+For an image + document + web request:
+
+User Question + Image + Uploaded PDF
+→ Image Analysis
+→ Document Retrieval
+→ Web Research
+→ Final Synthesis
+→ Answer
+
+## RAG pipeline
+
+For uploaded PDFs, the application follows a basic RAG pipeline:
+
+PDF
+→ Text extraction
+→ Chunking
+→ Embeddings
+→ Vector storage
+→ Similarity search
+→ Retrieved context
+→ LLM response
+
+The application uses:
+
+- FastEmbed for embeddings
+- `sentence-transformers/all-MiniLM-L6-v2` through FastEmbed
+- 384-dimensional vectors
+- PostgreSQL with pgvector for vector storage and search
+
+## Technology Stack
+
+### Frontend
+
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
+
+### Backend
+
+- Python
+- FastAPI
+- LangGraph
+- SQLAlchemy
+- pypdf
+
+### AI
+
+- Groq API
+- LLM-based final synthesis
+- Vision model for image analysis
+- FastEmbed for text embeddings
+
+### Database
+
+- PostgreSQL
+- pgvector
+
+### Deployment
+
+- Vercel for frontend
+- Render for backend
+- Neon PostgreSQL for production database
+
+## Authentication
+
+The application uses JWT-based authentication.
+
+Users can:
+
+- Register
+- Login
+- Logout
+- Access their own documents
+- Access their own research history
+
+Documents and research data are associated with the logged-in user so that one user cannot access another user's data.
+
+## Project Structure
+
+```text
+AI_Research_Agent/
+│
+├── backend/
+│   ├── main.py
+│   ├── agent_workflow.py
+│   ├── auth.py
+│   ├── database.py
+│   ├── models.py
+│   ├── schemas.py
+│   ├── requirements.txt
+│   │
+│   └── migrations/
+│       └── 001_add_users_and_ownership.sql
+│
+├── frontend/
+│   ├── src/
+│   │   ├── app/
+│   │   ├── components/
+│   │   └── lib/
+│   ├── package.json
+│   └── package-lock.json
+│
+├── .env.example
+├── DEPLOYMENT.md
+├── README.md
+└── .gitignore

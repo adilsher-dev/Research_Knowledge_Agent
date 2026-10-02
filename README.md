@@ -1,48 +1,165 @@
-# AI Research & Knowledge Agent
+# AI Research Agent
 
-Next.js frontend + FastAPI/LangGraph backend. Users register, upload PDFs to a private pgvector knowledge base, and ask questions; a planner routes each one to direct / document / web / both / image variants, then synthesizes an answer.
+AI Research Agent is a web application that helps users research a topic using different sources.
 
-## Architecture
-Next.js → FastAPI → LangGraph (planner → document / web / image routes → synthesis) → answer.
-Routes: `direct, document, web, both, image, image_document, image_web, image_both`.
+A user can ask a normal question, search the web, ask questions from uploaded PDFs, or combine documents, web research, and images in the same request.
 
-## Backend (unchanged core, from Phase 1)
-- RAG: PDF → extraction → cleaning → chunking → `all-MiniLM-L6-v2` (384-d) → PostgreSQL + pgvector
-- Hybrid retrieval: semantic search + PostgreSQL full-text search → Reciprocal Rank Fusion
-- Vision model: `qwen/qwen3.8-27b` via Groq
-- Auth: bcrypt + JWT (`Authorization: Bearer`), every query filtered by the token's user id — the browser never sends a user id
+I built this project to understand how RAG, vector search, multimodal AI, and agentic workflows can work together in one application.
 
-## Frontend
-Next.js 15 (App Router), React 19, TypeScript, plain CSS (warm espresso/cream theme). No UI framework.
-Pages: `/` landing, `/login`, `/register`, `/home`, `/research`, `/knowledge-base`, `/documents`, `/activity`, `/history`, `/history/[id]`, `/settings`.
-API access goes through `src/lib/api.ts`, using `NEXT_PUBLIC_API_BASE_URL`.
+## Live Project
 
-## Local development
-```bash
-# backend
-cd backend && python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env   # fill in real values
-psql -f migrations/001_add_users_and_ownership.sql
-uvicorn main:app --reload
+Frontend:  
+https://research-knowledge-agent.vercel.app
 
-# frontend
-cd frontend && cp .env.example .env.local   # set NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
-npm install && npm run dev
-```
-See `DEPLOYMENT.md` for production.
+Backend:  
+https://ai-research-agent-backend-enoo.onrender.com
 
-## API used by the frontend
-`POST /auth/register|login|logout`, `GET /auth/me`, `POST /upload-pdf`, `GET /documents`, `DELETE /documents/{id}`,
-`POST /agentic-research-multimodal`, `GET /research-history`, `GET /research-history/{id}`.
+API Documentation:  
+https://ai-research-agent-backend-enoo.onrender.com/docs
 
-## Known limitations (please read)
-- **Frontend build still needs to be verified on the developer machine.** The source was inspected here, but a complete `npm install && npm run build` could not be completed in this environment. Run both locally before deployment and commit the generated `package-lock.json`.
-- **No live per-node progress.** The backend executes the graph in one HTTP request, so the Activity panel can show request-level loading but not true server-sent stage updates.
-- **Web source listing is limited.** The current frontend receives a `has_web_result` flag rather than a structured list of web URLs.
-- **JWT is stored in browser `localStorage`.** This is workable for a portfolio/MVP, but stronger production session hardening would use Secure/HttpOnly cookies and CSRF protection.
-- **Auth logout is stateless.** A token remains valid until expiry if it has been copied; the browser simply discards it on logout.
-- **Rate limiting is not implemented in the app.** Add platform/WAF or backend rate limiting before broad public use.
-- **Legacy endpoints remain in `main.py`.** The frontend uses the authenticated multimodal endpoint, document APIs, and auth APIs; unused legacy endpoints can be removed in a later hardening pass.
-- Backend upload limits are enforced server-side: PDF 25 MB and image 4 MB by default.
-- `requirements.txt` is a pinned environment export; after successful local installation/build, consider keeping it aligned with the tested deployment environment.
+## What the application can do
+
+- Ask normal research questions
+- Upload PDF documents and ask questions about them
+- Search the web for current information
+- Analyze images
+- Combine information from documents and the web
+- Combine image information with uploaded documents
+- Combine image analysis with web research
+- Combine image, document, and web research in one request
+- Save research history
+- Manage uploaded documents
+- Keep documents and research history separated between users
+
+## How the agent works
+
+The application uses a planner to decide what sources are needed for a question.
+
+The main routes are:
+
+1. Direct
+2. Document
+3. Web
+4. Document + Web
+5. Image
+6. Image + Document
+7. Image + Web
+8. Image + Document + Web
+
+The selected route is handled by a LangGraph workflow.
+
+For example, a document + web request works like this:
+
+User Question
+→ Document Retrieval
+→ Web Research
+→ Final Synthesis
+→ Answer
+
+For an image + document + web request:
+
+User Question + Image + Uploaded PDF
+→ Image Analysis
+→ Document Retrieval
+→ Web Research
+→ Final Synthesis
+→ Answer
+
+## RAG pipeline
+
+For uploaded PDFs, the application follows a basic RAG pipeline:
+
+PDF
+→ Text extraction
+→ Chunking
+→ Embeddings
+→ Vector storage
+→ Similarity search
+→ Retrieved context
+→ LLM response
+
+The application uses:
+
+- FastEmbed for embeddings
+- `sentence-transformers/all-MiniLM-L6-v2` through FastEmbed
+- 384-dimensional vectors
+- PostgreSQL with pgvector for vector storage and search
+
+## Technology Stack
+
+### Frontend
+
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
+
+### Backend
+
+- Python
+- FastAPI
+- LangGraph
+- SQLAlchemy
+- pypdf
+
+### AI
+
+- Groq API
+- LLM-based final synthesis
+- Vision model for image analysis
+- FastEmbed for text embeddings
+
+### Database
+
+- PostgreSQL
+- pgvector
+
+### Deployment
+
+- Vercel for frontend
+- Render for backend
+- Neon PostgreSQL for production database
+
+## Authentication
+
+The application uses JWT-based authentication.
+
+Users can:
+
+- Register
+- Login
+- Logout
+- Access their own documents
+- Access their own research history
+
+Documents and research data are associated with the logged-in user so that one user cannot access another user's data.
+
+## Project Structure
+
+```text
+AI_Research_Agent/
+│
+├── backend/
+│   ├── main.py
+│   ├── agent_workflow.py
+│   ├── auth.py
+│   ├── database.py
+│   ├── models.py
+│   ├── schemas.py
+│   ├── requirements.txt
+│   │
+│   └── migrations/
+│       └── 001_add_users_and_ownership.sql
+│
+├── frontend/
+│   ├── src/
+│   │   ├── app/
+│   │   ├── components/
+│   │   └── lib/
+│   ├── package.json
+│   └── package-lock.json
+│
+├── .env.example
+├── DEPLOYMENT.md
+├── README.md
+└── .gitignore

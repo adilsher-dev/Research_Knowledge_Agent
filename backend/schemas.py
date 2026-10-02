@@ -3,9 +3,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
-# --------------------------------------------------
-# Auth
-# --------------------------------------------------
+
 
 class RegisterRequest(BaseModel):
     email: EmailStr
@@ -31,9 +29,7 @@ class TokenResponse(BaseModel):
     user: UserResponse
 
 
-# --------------------------------------------------
-# Documents
-# --------------------------------------------------
+
 
 class DocumentResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -46,9 +42,7 @@ class DocumentResponse(BaseModel):
     upload_date: datetime
 
 
-# --------------------------------------------------
-# Research history
-# --------------------------------------------------
+
 
 class ResearchHistoryItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)

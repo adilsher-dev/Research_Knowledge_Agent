@@ -30,29 +30,15 @@ from auth import (
 )
 
 
-# --------------------------------------------------
-# Environment
-# --------------------------------------------------
 
 load_dotenv()
 
 
-# --------------------------------------------------
-# FastAPI
-# --------------------------------------------------
 
 app = FastAPI()
 
 
-# --------------------------------------------------
-# CORS
-# --------------------------------------------------
 
-# --------------------------------------------------
-# CORS
-# --------------------------------------------------
-# Local dev origins always work; add your deployed frontend's
-# URL via FRONTEND_URL so production doesn't need a code change.
 
 _allowed_origins = [
     "http://localhost:3000",
@@ -73,26 +59,20 @@ app.add_middleware(
 )
 
 
-# --------------------------------------------------
-# Upload limits
-# --------------------------------------------------
+
 
 MAX_PDF_BYTES = int(os.getenv("MAX_PDF_BYTES", 25 * 1024 * 1024))
 MAX_IMAGE_BYTES = int(os.getenv("MAX_IMAGE_BYTES", 4 * 1024 * 1024))
 
 
-# --------------------------------------------------
-# Groq client
-# --------------------------------------------------
+
 
 client = Groq(
     api_key=os.getenv("GROQ_API_KEY")
 )
 
 
-# --------------------------------------------------
-# Embedding model
-# --------------------------------------------------
+
 
 class EmbeddingModel:
     def __init__(self, model_name: str):
@@ -112,9 +92,7 @@ embedding_model = EmbeddingModel(
 )
 
 
-# --------------------------------------------------
-# Request / Response Models
-# --------------------------------------------------
+
 
 class ChatRequest(BaseModel):
     message: str
@@ -138,9 +116,7 @@ class ResearchResponse(BaseModel):
     key_points: list[str]
 
 
-# --------------------------------------------------
-# Home
-# --------------------------------------------------
+
 
 @app.get("/")
 def home():
@@ -154,13 +130,7 @@ def health():
     return {"status": "ok"}
 
 
-# --------------------------------------------------
-# Authentication
-# --------------------------------------------------
-# Real, backend-enforced auth. The frontend never sends a
-# user_id — every protected route below resolves "who is
-# asking" from the verified JWT via get_current_user, and
-# every query is filtered by that id.
+
 
 @app.post("/auth/register", response_model=schemas.TokenResponse)
 def register(data: schemas.RegisterRequest):
@@ -239,9 +209,7 @@ def get_me(current_user: User = Depends(get_current_user)):
     return schemas.UserResponse.model_validate(current_user)
 
 
-# --------------------------------------------------
-# Chat endpoint
-# --------------------------------------------------
+
 
 @app.post("/chat")
 def chat(
@@ -285,9 +253,7 @@ def chat(
     )
 
 
-# --------------------------------------------------
-# Research endpoint
-# --------------------------------------------------
+
 
 @app.post(
     "/research",
@@ -455,9 +421,7 @@ async def agentic_research_multimodal(
     }
 
 
-# --------------------------------------------------
-# Document library (new)
-# --------------------------------------------------
+
 
 @app.get("/documents", response_model=list[schemas.DocumentResponse])
 def list_documents(current_user: User = Depends(get_current_user)):
@@ -514,9 +478,6 @@ def delete_document(
         db.close()
 
 
-# --------------------------------------------------
-# Research history (new)
-# --------------------------------------------------
 
 @app.get("/research-history", response_model=list[schemas.ResearchHistoryItem])
 def list_research_history(current_user: User = Depends(get_current_user)):
@@ -563,17 +524,7 @@ def get_research_history_item(
         db.close()
 
 
-# --------------------------------------------------
-# Get previous research
-# --------------------------------------------------
 
-# --------------------------------------------------
-# Get previous research
-# --------------------------------------------------
-# NOTE: superseded by GET /research-history, which returns a
-# proper typed response. Kept for backward compatibility with
-# any existing callers, now scoped and auth-gated like everything
-# else that reads research_queries.
 
 @app.get("/research")
 def get_research(current_user: User = Depends(get_current_user)):
@@ -596,9 +547,6 @@ def get_research(current_user: User = Depends(get_current_user)):
         db.close()
 
 
-# --------------------------------------------------
-# Clean extracted PDF text
-# --------------------------------------------------
 
 def clean_text(text: str) -> str:
 
@@ -622,9 +570,7 @@ def clean_text(text: str) -> str:
     return text
 
 
-# --------------------------------------------------
-# Chunk text
-# --------------------------------------------------
+
 
 def chunk_text(
     text: str,
@@ -697,9 +643,7 @@ def chunk_text(
 
     return chunks
 
-# --------------------------------------------------
-# Upload PDF
-# --------------------------------------------------
+
 
 @app.post("/upload-pdf")
 async def upload_pdf(
@@ -777,18 +721,13 @@ async def upload_pdf(
                 "error": "No readable text was found in the PDF."
             }
 
-        # --------------------------------------------------
-        # Create embeddings
-        # --------------------------------------------------
+       
 
         embeddings = embedding_model.encode(
             chunks
         ).tolist()
 
-        # --------------------------------------------------
-        # Store the document + its chunks/embeddings,
-        # scoped to the authenticated user
-        # --------------------------------------------------
+        
 
         document = Document(
             user_id=current_user.id,
@@ -846,9 +785,7 @@ async def upload_pdf(
             os.remove(file_path)
 
 
-# --------------------------------------------------
-# Vector Search
-# --------------------------------------------------
+
 
 @app.post("/vector-search")
 def vector_search(
@@ -898,9 +835,7 @@ def vector_search(
     finally:
         db.close()
 
-# --------------------------------------------------
-# Hybrid Retrieval Function
-# --------------------------------------------------
+
 
 def hybrid_retrieve(
     question: str,
@@ -918,9 +853,7 @@ def hybrid_retrieve(
     be able to retrieve that same user's own uploaded chunks.
     """
 
-    # --------------------------------------------------
-    # 1. Create question embedding
-    # --------------------------------------------------
+    
 
     question_embedding = embedding_model.encode(
         question
@@ -930,9 +863,7 @@ def hybrid_retrieve(
 
     try:
 
-        # ==================================================
-        # A. SEMANTIC SEARCH
-        # ==================================================
+        
 
         vector_results = (
             db.query(
@@ -954,9 +885,7 @@ def hybrid_retrieve(
             .all()
         )
 
-        # ==================================================
-        # B. KEYWORD SEARCH
-        # ==================================================
+        
 
         words = re.findall(
             r"[A-Za-z0-9]+",
@@ -1034,15 +963,11 @@ def hybrid_retrieve(
                 .all()
             )
 
-        # ==================================================
-        # C. COMBINE USING RRF
-        # ==================================================
+        
 
         combined_results = {}
 
-        # --------------------------------------------------
-        # Semantic results
-        # --------------------------------------------------
+        
 
         for rank, (chunk, similarity) in enumerate(
             vector_results,
@@ -1061,9 +986,7 @@ def hybrid_retrieve(
                 ]
             }
 
-        # --------------------------------------------------
-        # Keyword results
-        # --------------------------------------------------
+        
 
         for rank, (chunk, keyword_score) in enumerate(
             keyword_results,
@@ -1106,10 +1029,7 @@ def hybrid_retrieve(
                     ]
                 }
 
-        # ==================================================
-        # D. SORT BY FINAL RRF SCORE
-        # ==================================================
-
+        
         final_results = sorted(
             combined_results.values(),
             key=lambda item: item["rrf_score"],
@@ -1121,9 +1041,7 @@ def hybrid_retrieve(
     finally:
         db.close()
 
-# --------------------------------------------------
-# Hybrid Search Endpoint
-# --------------------------------------------------
+
 
 @app.post("/hybrid-search")
 def hybrid_search(
@@ -1149,9 +1067,6 @@ def hybrid_search(
         }
         for item in results
     ]
-# --------------------------------------------------
-# Tool: Search uploaded documents
-# --------------------------------------------------
 
 def search_uploaded_documents(
     question: str,
@@ -1197,9 +1112,7 @@ def search_uploaded_documents(
 
     return tool_results
 
-# --------------------------------------------------
-# Tool definition for the LLM
-# --------------------------------------------------
+
 
 document_search_tool = {
     "type": "function",
@@ -1226,9 +1139,6 @@ document_search_tool = {
         }
     }
 }
-# --------------------------------------------------
-# Built-in Web Search Tool
-# --------------------------------------------------
 
 browser_search_tool = {
     "type": "browser_search"
@@ -1239,21 +1149,7 @@ available_tools = [
     browser_search_tool
 ]
 
-# --------------------------------------------------
-# Agent with Tool Calling
-# --------------------------------------------------
 
-# --------------------------------------------------
-# Agent with Document Search + Web Search
-# --------------------------------------------------
-
-# --------------------------------------------------
-# Combined Research Agent
-# --------------------------------------------------
-
-# --------------------------------------------------
-# Research Agent Router
-# --------------------------------------------------
 
 @app.post("/agent")
 def agent(
@@ -1281,9 +1177,7 @@ def agent(
         for keyword in web_keywords
     )
 
-    # --------------------------------------------------
-    # WEB RESEARCH
-    # --------------------------------------------------
+   
 
     if needs_web:
 
@@ -1527,19 +1421,14 @@ def rag(
     current_user: User = Depends(get_current_user)
 ):
 
-    # --------------------------------------------------
-    # 1. Hybrid retrieval
-    # --------------------------------------------------
-
+   
     results = hybrid_retrieve(
         data.question,
         current_user.id,
         top_k=5
     )
 
-    # --------------------------------------------------
-    # 2. No results
-    # --------------------------------------------------
+    
 
     if not results:
 
@@ -1553,10 +1442,7 @@ def rag(
             "sources": []
         }
 
-    # --------------------------------------------------
-    # 3. Build context
-    # --------------------------------------------------
-
+    
     context_parts = []
 
     for source_id, item in enumerate(
@@ -1585,9 +1471,7 @@ Content:
         context_parts
     )
 
-    # --------------------------------------------------
-    # 4. Send context to LLM
-    # --------------------------------------------------
+    
 
     response = client.chat.completions.create(
 
@@ -1647,10 +1531,7 @@ Include source citations.
         include_reasoning=False
     )
 
-    # --------------------------------------------------
-    # 5. Get answer
-    # --------------------------------------------------
-
+    
     answer = response.choices[0].message.content
 
     print(
@@ -1663,9 +1544,7 @@ Include source citations.
         response.choices[0].finish_reason
     )
 
-    # --------------------------------------------------
-    # 6. Build sources
-    # --------------------------------------------------
+    
 
     sources = []
 
@@ -1699,19 +1578,13 @@ Include source citations.
             }
         )
 
-    # --------------------------------------------------
-    # 7. Final response
-    # --------------------------------------------------
-
+    
     return {
         "question": data.question,
         "answer": answer,
         "sources": sources
     }
 
-# --------------------------------------------------
-# Agent Planner
-# --------------------------------------------------
 
 def plan_research(question: str, has_image: bool = False) -> dict:
 
@@ -1801,9 +1674,7 @@ Do not add any other fields.
     return json.loads(content)
 
 
-# --------------------------------------------------
-# Web Search Helper
-# --------------------------------------------------
+
 
 def perform_web_search(question: str) -> str:
 
@@ -1850,9 +1721,7 @@ Rules:
 
     return response.choices[0].message.content
 
-# --------------------------------------------------
-# Agentic Research Workflow
-# --------------------------------------------------
+
 
 @app.post("/agentic-research")
 def agentic_research(
@@ -1861,9 +1730,7 @@ def agentic_research(
 ):
     from agent_workflow import research_graph
 
-    # --------------------------------------------------
-    # 1. PLAN
-    # --------------------------------------------------
+    
 
     plan = plan_research(
         data.question
@@ -1878,10 +1745,7 @@ def agentic_research(
     document_results = []
     web_result = None
 
-    # --------------------------------------------------
-    # 2. ACT — DOCUMENT
-    # --------------------------------------------------
-
+    
     if route in {"document", "both"}:
 
         document_results = (
@@ -1893,9 +1757,7 @@ def agentic_research(
         
     print("DOCUMENT RESULTS:", len(document_results))
 
-    # --------------------------------------------------
-    # 3. ACT — WEB
-    # --------------------------------------------------
+    
 
     if route in {"web", "both"}:
 
@@ -1905,10 +1767,7 @@ def agentic_research(
 
     print("WEB RESULT RECEIVED:", web_result is not None)
 
-    # --------------------------------------------------
-    # 4. DIRECT ANSWER
-    # --------------------------------------------------
-
+    
     if route == "direct":
 
         response = client.chat.completions.create(
@@ -1995,9 +1854,7 @@ Content:
 
         research_context += web_result
 
-    # --------------------------------------------------
-    # 6. FINAL SYNTHESIS
-    # --------------------------------------------------
+    
 
     print("FINAL SYNTHESIS STARTING")
 
@@ -2052,9 +1909,7 @@ Now produce the final answer.
         include_reasoning=False
     )
 
-    # --------------------------------------------------
-    # 7. RETURN
-    # --------------------------------------------------
+    
 
     return {
         "question": data.question,

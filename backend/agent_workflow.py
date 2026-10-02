@@ -18,7 +18,7 @@ from main import (
 )
 
 # --------------------------------------------------
-# Environment
+# env
 # --------------------------------------------------
 
 load_dotenv()
@@ -32,7 +32,7 @@ client = Groq(
 )
 
 # --------------------------------------------------
-# LangGraph State
+# aise create karte hai langraph
 # --------------------------------------------------
 
 class ResearchState(TypedDict):
@@ -48,7 +48,7 @@ class ResearchState(TypedDict):
 
 
 # --------------------------------------------------
-# Image Helpers
+# aise encode karte hai image
 # --------------------------------------------------
 
 def image_to_data_url(image_path: str) -> str:
@@ -122,7 +122,7 @@ def analyze_image(
 
 
 # --------------------------------------------------
-# Document Availability
+# doc available hai ki nahi
 # --------------------------------------------------
 
 def has_uploaded_documents(user_id: int) -> bool:
@@ -144,7 +144,7 @@ def has_uploaded_documents(user_id: int) -> bool:
 
 
 # --------------------------------------------------
-# Planner Node
+# pehle plannode banao
 # --------------------------------------------------
 
 def planner_node(state: ResearchState):
@@ -166,9 +166,7 @@ def planner_node(state: ResearchState):
 
     documents_available = has_uploaded_documents(state["user_id"])
 
-    # --------------------------------------------------
-    # Keywords
-    # --------------------------------------------------
+    
 
     document_keywords = [
         "cgpa",
@@ -219,7 +217,7 @@ def planner_node(state: ResearchState):
     )
 
     # --------------------------------------------------
-    # Debug information
+    # debug kra hai isse
     # --------------------------------------------------
 
     print("QUESTION:", question)
@@ -229,7 +227,7 @@ def planner_node(state: ResearchState):
     print("HAS IMAGE:", has_image)
 
     # --------------------------------------------------
-    # IMAGE ROUTING
+    # image ki routing
     # --------------------------------------------------
 
     if has_image:
@@ -264,10 +262,10 @@ def planner_node(state: ResearchState):
         }
 
     # --------------------------------------------------
-    # NON-IMAGE ROUTING
+    # bina image routing
     # --------------------------------------------------
 
-    # IMPORTANT:
+    # combined check krlo
     # Check the combined route BEFORE individual routes.
     if needs_document and needs_web:
         return {
@@ -293,9 +291,7 @@ def planner_node(state: ResearchState):
             )
         }
 
-    # --------------------------------------------------
-    # Existing LLM planner fallback
-    # --------------------------------------------------
+    
 
     plan = plan_research(state["question"])
 
@@ -306,7 +302,7 @@ def planner_node(state: ResearchState):
 
 
 # --------------------------------------------------
-# Document Node
+# Doc node
 # --------------------------------------------------
 
 def document_node(state: ResearchState):
@@ -321,7 +317,7 @@ def document_node(state: ResearchState):
 
 
 # --------------------------------------------------
-# Web Node
+# Web search node hai ye
 # --------------------------------------------------
 
 def web_node(state: ResearchState):
@@ -334,7 +330,7 @@ def web_node(state: ResearchState):
     }
 
 # --------------------------------------------------
-# Both: Document + Web Node
+# doc + web node hai
 # --------------------------------------------------
 
 def both_node(state: ResearchState):
@@ -390,7 +386,7 @@ the document research provided above.
     }
 
 # --------------------------------------------------
-# Direct Node
+# direct node hai ue
 # --------------------------------------------------
 
 def direct_node(state: ResearchState):
@@ -423,7 +419,7 @@ Do not invent information.
 
 
 # --------------------------------------------------
-# Image Node
+# Image Node hai ye
 # --------------------------------------------------
 
 def image_node(state: ResearchState):
@@ -438,7 +434,7 @@ def image_node(state: ResearchState):
 
 
 # --------------------------------------------------
-# Image + Document Node
+# Image + Document Node hai ye
 # --------------------------------------------------
 
 def image_document_node(state: ResearchState):
@@ -459,7 +455,7 @@ def image_document_node(state: ResearchState):
 
 
 # --------------------------------------------------
-# Image + Web Node
+# Image + Web Node hai ye 
 # --------------------------------------------------
 
 def image_web_node(state: ResearchState):
@@ -496,7 +492,7 @@ Research only the technology/topic identified in the vision analysis.
     }
 
 # --------------------------------------------------
-# Image + Document + Web Node
+# Image + Document + Web Node hai ye
 # --------------------------------------------------
 
 def image_both_node(state: ResearchState):
@@ -563,7 +559,7 @@ Research the relevant technology/topic using current web sources.
     }
 
 # --------------------------------------------------
-# Synthesis Node
+# yahan par result synthesis hoga
 # --------------------------------------------------
 
 def synthesis_node(state: ResearchState):
@@ -637,7 +633,7 @@ Give the final answer.
         }
     ]
 
-    # Retry Groq request if rate limit (429) occurs
+    # agar groq ki limit aayegi to ushe try catch se handle kr rhe hai bina limit error diye
     response = None
 
     for attempt in range(3):
@@ -672,7 +668,7 @@ Give the final answer.
     }
 
 # --------------------------------------------------
-# Route After Planner
+# Route banao after planner
 # --------------------------------------------------
 
 def route_after_planner(state: ResearchState):
@@ -703,7 +699,7 @@ def route_after_planner(state: ResearchState):
 
 
 # --------------------------------------------------
-# Build Graph
+# graph banao aise
 # --------------------------------------------------
 
 builder = StateGraph(ResearchState)
@@ -761,7 +757,7 @@ builder.add_node(
 
 
 # --------------------------------------------------
-# Edges
+# usme edges daalo
 # --------------------------------------------------
 
 builder.add_edge(
@@ -831,7 +827,7 @@ builder.add_edge(
 
 
 # --------------------------------------------------
-# Compile
+# graph ko compile karo taaki inbuilt methods support ho sakein
 # --------------------------------------------------
 
 research_graph = builder.compile()

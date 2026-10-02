@@ -37,8 +37,7 @@ def normalize_database_url(url: str) -> str:
     return url
 
 
-# Production-friendly option:
-# use DATABASE_URL from Neon/managed PostgreSQL.
+
 DATABASE_URL_ENV = os.getenv("DATABASE_URL")
 
 if DATABASE_URL_ENV:

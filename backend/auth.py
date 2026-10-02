@@ -12,12 +12,6 @@ from models import User
 
 load_dotenv()
 
-# --------------------------------------------------
-# Config
-# --------------------------------------------------
-# JWT_SECRET must be set in the environment. We fail
-# fast at import time rather than silently signing
-# tokens with a missing/weak secret.
 
 JWT_SECRET = os.getenv("JWT_SECRET")
 JWT_ALGORITHM = "HS256"
@@ -31,9 +25,6 @@ if not JWT_SECRET:
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
-# --------------------------------------------------
-# Passwords
-# --------------------------------------------------
 
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(
@@ -49,9 +40,7 @@ def verify_password(password: str, hashed_password: str) -> bool:
     )
 
 
-# --------------------------------------------------
-# JWT
-# --------------------------------------------------
+
 
 def create_access_token(user_id: int) -> str:
     now = datetime.now(timezone.utc)
@@ -83,13 +72,7 @@ def decode_access_token(token: str) -> int:
         )
 
 
-# --------------------------------------------------
-# FastAPI dependency
-# --------------------------------------------------
-# Every protected endpoint depends on this. It is the
-# ONLY source of truth for "who is making this request" —
-# routes must never accept a user_id from the request
-# body or query params instead.
+
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),

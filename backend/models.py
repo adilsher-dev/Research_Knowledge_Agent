@@ -9,21 +9,12 @@ from sqlalchemy.orm import (
 
 from pgvector.sqlalchemy import Vector
 
-# --------------------------------------------------
-# Base
-# --------------------------------------------------
+
 
 class Base(DeclarativeBase):
     pass
 
 
-# --------------------------------------------------
-# User
-# --------------------------------------------------
-# Added for authentication / per-user data ownership.
-# Every other table now scopes its rows to a user via
-# a user_id foreign key so one user can never read,
-# modify, or delete another user's data.
 
 class User(Base):
 
@@ -52,9 +43,7 @@ class User(Base):
     )
 
 
-# --------------------------------------------------
-# Research Query
-# --------------------------------------------------
+
 
 class ResearchQuery(Base):
 
@@ -65,9 +54,7 @@ class ResearchQuery(Base):
         autoincrement=True
     )
 
-    # Nullable so rows created before this migration
-    # (user_id did not exist yet) do not break. Every
-    # new row written by the API always sets this.
+    
     user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=True,
@@ -89,8 +76,7 @@ class ResearchQuery(Base):
         nullable=True
     )
 
-    # Which LangGraph route answered this question
-    # (direct / document / web / both / image / ...).
+    
     route: Mapped[str | None] = mapped_column(
         String(50),
         nullable=True
@@ -107,13 +93,6 @@ class ResearchQuery(Base):
     )
 
 
-# --------------------------------------------------
-# Document
-# --------------------------------------------------
-# One row per uploaded file. Added so the Document
-# Library / Knowledge Base pages have something to
-# list, show status/chunk counts on, and delete —
-# separate from the individual chunk rows.
 
 class Document(Base):
 
@@ -159,9 +138,6 @@ class Document(Base):
     )
 
 
-# --------------------------------------------------
-# Document Chunk
-# --------------------------------------------------
 
 class DocumentChunk(Base):
 

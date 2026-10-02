@@ -1,16 +1,10 @@
--- Migration 001: production bootstrap + authentication + per-user ownership
---
--- Safe to run against either a fresh database or the existing research_agent
--- database. It creates the base tables when missing, then adds the auth/
--- ownership columns needed by the cloud version.
 
+----------------------------------
+--tables banalo isse
+------------------------------------
 BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS vector;
-
--- --------------------------------------------------
--- users
--- --------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
@@ -19,9 +13,6 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP NOT NULL DEFAULT now()
 );
 
--- --------------------------------------------------
--- documents
--- --------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS documents (
     id SERIAL PRIMARY KEY,
@@ -33,9 +24,6 @@ CREATE TABLE IF NOT EXISTS documents (
     upload_date TIMESTAMP NOT NULL DEFAULT now()
 );
 
--- --------------------------------------------------
--- research_queries
--- --------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS research_queries (
     id SERIAL PRIMARY KEY,
@@ -48,9 +36,6 @@ CREATE TABLE IF NOT EXISTS research_queries (
     created_at TIMESTAMP NOT NULL DEFAULT now()
 );
 
--- --------------------------------------------------
--- document_chunks
--- --------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS document_chunks (
     id BIGSERIAL PRIMARY KEY,
@@ -63,9 +48,7 @@ CREATE TABLE IF NOT EXISTS document_chunks (
     created_at TIMESTAMP NOT NULL DEFAULT now()
 );
 
--- --------------------------------------------------
--- Backfill missing columns on older databases
--- --------------------------------------------------
+
 
 ALTER TABLE document_chunks
     ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE CASCADE;
@@ -79,9 +62,7 @@ ALTER TABLE research_queries
 ALTER TABLE research_queries
     ADD COLUMN IF NOT EXISTS route VARCHAR(50);
 
--- --------------------------------------------------
--- Indexes for user-scoped queries
--- --------------------------------------------------
+
 
 CREATE INDEX IF NOT EXISTS idx_documents_user_id ON documents(user_id);
 CREATE INDEX IF NOT EXISTS idx_document_chunks_user_id ON document_chunks(user_id);
@@ -90,10 +71,4 @@ CREATE INDEX IF NOT EXISTS idx_research_queries_user_id ON research_queries(user
 
 COMMIT;
 
--- --------------------------------------------------
--- Existing legacy rows
--- --------------------------------------------------
--- Rows created before authentication have user_id = NULL and remain hidden
--- from the authenticated API. For a known first account, re-uploading the
--- documents is the cleanest option. If you intentionally want to claim old
--- rows, assign them explicitly after registering that account.
+
